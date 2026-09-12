@@ -12,6 +12,7 @@ built with the system toolchain, registered as a launchd login agent.
 ### Homebrew
 
 ```bash
+brew trust --tap https://github.com/np25071984/lidless
 brew tap np25071984/lidless https://github.com/np25071984/lidless
 brew install lidless
 brew services start lidless
@@ -20,6 +21,16 @@ brew services start lidless
 The two-argument `brew tap` points at this repository directly, so the formula
 lives alongside the source instead of in a separate `homebrew-*` tap. Upgrades
 are the usual `brew upgrade lidless`.
+
+The `brew trust` step is not optional. Current Homebrew refuses to load formulae
+from third-party taps until they are trusted, and the failure is reported as
+`Error: Cannot tap ...: invalid syntax in tap!`, which is misleading — there is
+nothing wrong with the formula. Trust is matched against the tap's **remote
+URL**, not its short `user/repo` name, so `brew trust --tap np25071984/lidless`
+does not work here; the URL form above is what matches.
+
+Homebrew builds from source with `swiftc`, so the Command Line Tools must be
+installed (`xcode-select --install`). Full Xcode is not required.
 
 ### From source
 
