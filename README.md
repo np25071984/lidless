@@ -9,12 +9,34 @@ built with the system toolchain, registered as a launchd login agent.
 
 ## Install
 
+### Homebrew
+
+```bash
+brew tap np25071984/lidless https://github.com/np25071984/lidless
+brew install lidless
+brew services start lidless
+```
+
+The two-argument `brew tap` points at this repository directly, so the formula
+lives alongside the source instead of in a separate `homebrew-*` tap. Upgrades
+are the usual `brew upgrade lidless`.
+
+### From source
+
 ```bash
 ./install.sh
 ```
 
 Builds `~/.local/bin/lidless`, writes `~/Library/LaunchAgents/com.local.lidless.plist`,
 and starts it. It runs at login and restarts itself if it dies.
+
+Do not run both: if you installed via `install.sh` and later switch to Homebrew,
+remove the hand-rolled agent first, or two copies will fight over the backlight.
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.local.lidless.plist
+rm ~/Library/LaunchAgents/com.local.lidless.plist
+```
 
 ## Usage
 
@@ -26,8 +48,11 @@ The agent needs no interaction. For manual control:
 | `lidless --once` | Apply the correct state right now, then exit |
 | `lidless --off` | Force the built-in display off |
 | `lidless --on` | Force the built-in display back on |
+| `lidless --version` | Print the version |
+| `lidless --help` | Print usage |
 
-Transitions are logged to `~/.local/state/lidless.log`. The brightness to restore
+Transitions are logged to `~/.local/state/lidless.log`, or to
+`$(brew --prefix)/var/log/lidless.log` under `brew services`. The brightness to restore
 on undock is remembered in `~/.local/state/lidless-brightness`.
 
 ## How it works

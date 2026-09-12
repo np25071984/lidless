@@ -12,6 +12,22 @@ import AppKit
 
 enum Lidless {
 
+    static let version = "0.1.0"
+
+    static let usage = """
+    lidless \(version) - keep the built-in display dark while docked
+
+    usage: lidless [option]
+
+      (no option)  run as a daemon, watching for displays being plugged in
+      --once       apply the correct state right now, then exit
+      --off        force the built-in display off
+      --on         force the built-in display back on
+      --status     list online displays, their brightness, and dock state
+      --version    print the version
+      --help       print this message
+    """
+
     // MARK: - DisplayServices
     // The only way to drive built-in brightness on Apple Silicon; it lives in a
     // private framework, so it is resolved by hand rather than linked against.
@@ -178,6 +194,8 @@ enum Lidless {
             }
         case args.contains("--off"):  builtinDisplay().map(turnOff)
         case args.contains("--on"):   builtinDisplay().map(turnOn)
+        case args.contains("--version"): print(version)
+        case args.contains("--help"), args.contains("-h"): print(usage)
         case args.contains("--status"):
             for id in onlineDisplays() {
                 var b: Float = -1
