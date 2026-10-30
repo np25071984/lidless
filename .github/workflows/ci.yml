@@ -41,3 +41,9 @@ jobs:
         run: |
           brew install --build-from-source ${{ github.repository }}/lidless
           brew test ${{ github.repository }}/lidless
+
+      - name: HEAD build reports its commit
+        run: |
+          brew uninstall lidless
+          brew install --HEAD ${{ github.repository }}/lidless
+          lidless --version | grep '^HEAD-'

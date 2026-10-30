@@ -11,6 +11,9 @@ class Lidless < Formula
   def install
     # swiftc ships with the Command Line Tools, which Homebrew already requires,
     # so no Xcode dependency is needed.
+    # Stamp the formula's version, so a --HEAD build reports HEAD-<commit>
+    # instead of the last release's number.
+    inreplace "main.swift", /static let version = ".*"/, "static let version = \"#{version}\""
     system "swiftc", "-O", "-o", "lidless", "main.swift"
     bin.install "lidless"
   end
