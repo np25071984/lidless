@@ -12,7 +12,7 @@ import AppKit
 
 enum Lidless {
 
-    static let version = "0.1.0"
+    static let version = "0.1.1"
 
     static let usage = """
     lidless \(version) - keep the built-in display dark while docked
