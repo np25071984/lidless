@@ -4,7 +4,7 @@ class Lidless < Formula
   url "https://github.com/np25071984/lidless/archive/refs/tags/v0.1.1.tar.gz"
   sha256 "42ec6adb6ef7f4cc6c4514c4d2fa55fece2b058025ec274e8c8bd518a73ecb8f"
   license "MIT"
-  head "https://github.com/np25071984/lidless.git"
+  head "https://github.com/np25071984/lidless.git", branch: "main"
 
   depends_on :macos
 
