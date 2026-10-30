@@ -1,5 +1,7 @@
 # lidless
 
+[![CI](https://github.com/np25071984/lidless/actions/workflows/ci.yml/badge.svg)](https://github.com/np25071984/lidless/actions/workflows/ci.yml)
+
 Turns the built-in MacBook display off whenever an external monitor is connected, and restores its previous brightness when you unplug — clamshell-mode behaviour without closing the lid.
 
 No third-party apps and no Accessibility permission: a single ~90 KB Swift binary built with the system toolchain, registered as a launchd login agent.
