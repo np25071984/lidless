@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          swiftc --version
+          swiftc -O -o lidless main.swift
+          ./lidless --version
+
+      - name: Check shell scripts
+        run: bash -n install.sh uninstall.sh
+
+  formula:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Tap by URL so trust matches it, then overlay this commit's formula so a
+      # pull request is audited against its own changes.
+      - name: Tap
+        run: |
+          brew trust --tap https://github.com/${{ github.repository }}
+          brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
+          cp Formula/lidless.rb "$(brew --repository ${{ github.repository }})/Formula/lidless.rb"
+
+      - name: Audit
+        run: brew audit --strict --formula ${{ github.repository }}/lidless
+
+      # Builds the release tarball the formula pins, so a wrong url or sha256 fails here.
+      - name: Install and test
+        run: |
+          brew install --build-from-source ${{ github.repository }}/lidless
+          brew test ${{ github.repository }}/lidless
