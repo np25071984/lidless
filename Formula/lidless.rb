@@ -31,7 +31,7 @@ class Lidless < Formula
 
       If you previously installed lidless with its own install.sh, remove the
       hand-rolled agent first so the two do not fight:
-        launchctl unload ~/Library/LaunchAgents/com.local.lidless.plist
+        launchctl bootout gui/$(id -u)/com.local.lidless
         rm ~/Library/LaunchAgents/com.local.lidless.plist
     EOS
   end

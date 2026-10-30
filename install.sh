@@ -34,6 +34,21 @@ cat > "$PLIST" <<PLIST_EOF
 </plist>
 PLIST_EOF
 
-launchctl unload "$PLIST" 2>/dev/null || true
-launchctl load "$PLIST"
-echo "installed; running as pid $(pgrep -f "$BIN" || echo '?')"
+DOMAIN="gui/$(id -u)"
+JOB="$DOMAIN/com.local.lidless"
+
+launchctl bootout "$JOB" 2>/dev/null || true
+# bootout returns before the job is gone, and bootstrap fails with error 5 until it is.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    launchctl print "$JOB" >/dev/null 2>&1 || break
+    sleep 0.5
+done
+launchctl bootstrap "$DOMAIN" "$PLIST"
+
+pid=""
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    pid="$(launchctl print "$JOB" 2>/dev/null | awk '$1 == "pid" {print $3}')"
+    [ -n "$pid" ] && break
+    sleep 0.5
+done
+echo "installed; running as pid ${pid:-?}"

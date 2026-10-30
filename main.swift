@@ -2,10 +2,7 @@
 // is connected, and restore its previous brightness when it is unplugged.
 //
 // Build: swiftc -O -o ~/.local/bin/lidless main.swift
-// Run:   lidless            (daemon: watches for display changes)
-//        lidless --once     (apply the correct state right now, then exit)
-//        lidless --off      (force the built-in display off)
-//        lidless --on       (force the built-in display back on)
+// Run:   lidless --help     (options are listed in `usage` below)
 
 import Foundation
 import AppKit

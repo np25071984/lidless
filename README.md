@@ -38,7 +38,7 @@ Builds `~/.local/bin/lidless`, writes `~/Library/LaunchAgents/com.local.lidless.
 Do not run both: if you installed via `install.sh` and later switch to Homebrew, remove the hand-rolled agent first, or two copies will fight over the backlight.
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.local.lidless.plist
+launchctl bootout gui/$(id -u)/com.local.lidless
 rm ~/Library/LaunchAgents/com.local.lidless.plist
 ```
 

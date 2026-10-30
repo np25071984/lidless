@@ -2,7 +2,7 @@
 # Remove the login agent, the binary, and the saved state.
 set -euo pipefail
 PLIST="$HOME/Library/LaunchAgents/com.local.lidless.plist"
-launchctl unload "$PLIST" 2>/dev/null || true
+launchctl bootout "gui/$(id -u)/com.local.lidless" 2>/dev/null || true
 # The agent leaves the panel dark if it stops while docked.
 "$HOME/.local/bin/lidless" --on 2>/dev/null || true
 rm -f "$PLIST" "$HOME/.local/bin/lidless" \
