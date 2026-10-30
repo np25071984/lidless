@@ -4,6 +4,10 @@ Turns the built-in MacBook display off whenever an external monitor is connected
 
 No third-party apps and no Accessibility permission: a single ~90 KB Swift binary built with the system toolchain, registered as a launchd login agent.
 
+## Requirements
+
+macOS with Swift 5.10 or later, which ships with Xcode 15.3 and the matching Command Line Tools (`xcode-select --install`). Check with `swiftc --version`.
+
 ## Install
 
 ### Homebrew
@@ -19,7 +23,7 @@ The two-argument `brew tap` points at this repository directly, so the formula l
 
 The `brew trust` step is not optional. Current Homebrew refuses to load formulae from third-party taps until they are trusted, and the failure is reported as `Error: Cannot tap ...: invalid syntax in tap!`, which is misleading — there is nothing wrong with the formula. Trust is matched against the tap's **remote URL**, not its short `user/repo` name, so `brew trust --tap np25071984/lidless` does not work here; the URL form above is what matches.
 
-Homebrew builds from source with `swiftc`, so the Command Line Tools must be installed (`xcode-select --install`). Full Xcode is not required.
+Homebrew builds from source with `swiftc`, so the Command Line Tools must be installed. Full Xcode is not required.
 
 ### From source
 
@@ -60,7 +64,7 @@ Two details that are easy to get wrong:
 - **The built-in panel is found via `CGGetOnlineDisplayList`, not `CGGetActiveDisplayList`.** With the lid shut or while mirroring, it drops out of the active list while still being the display whose backlight matters.
 - **Docking state is polled every 2 seconds rather than driven by `CGDisplayRegisterReconfigurationCallback`.** That callback is not delivered to a background launchd agent, which fails silently — the process stays alive with an empty error log and simply never reacts. The callback is still registered as a fast path when it does fire.
 
-Brightness is only written when the docking state *changes*, so adjusting the built-in panel by hand while docked is never fought or overwritten.
+Brightness is only written when the docking state *changes*, or on wake while docked, because macOS relights the panel itself. Adjusting the built-in panel by hand while docked is never fought or overwritten. On its first check while undocked, the agent keeps the current brightness, and restores the saved one only if an earlier run left the panel dark.
 
 ## Cost
 
@@ -83,6 +87,19 @@ The panel goes dark but stays a display as far as macOS is concerned, so in exte
 
 ## Uninstall
 
+Stopping the agent while docked leaves the built-in panel dark, so each route turns it back on.
+
+From source, `uninstall.sh` does that and removes the agent, binary, log and saved brightness:
+
 ```bash
 ./uninstall.sh
+```
+
+With Homebrew:
+
+```bash
+brew services stop lidless
+lidless --on
+brew uninstall lidless
+rm -f ~/.local/state/lidless-brightness
 ```

@@ -123,10 +123,22 @@ enum Lidless {
     nonisolated(unsafe) static var lastExternal: Bool?
 
     /// Acts only on a *change* in docking state, so a manual brightness tweak
-    /// while docked is never fought or overwritten.
-    static func apply() {
+    /// while docked is never fought or overwritten. `reassert` turns the panel
+    /// off again while docked, for after wake, when macOS relights it itself.
+    static func apply(reassert: Bool = false) {
         guard let builtin = builtinDisplay() else { return }
         let external = hasExternalDisplay()
+
+        // First observation while undocked: leave the user's brightness alone,
+        // unless the panel was left dark by an earlier run that stopped while docked.
+        if lastExternal == nil && !external, let ds = displayServices {
+            var current: Float = 0
+            let lit = ds.get(builtin, &current) == 0 && current > 0.05
+            log("transition: external unknown -> false (panel \(lit ? "lit" : "dark"))")
+            lastExternal = false
+            if lit { saveBrightness(current) } else { turnOn(builtin) }
+            return
+        }
 
         if lastExternal != external {
             log("transition: external \(lastExternal.map(String.init(describing:)) ?? "unknown") -> \(external)")
@@ -135,9 +147,14 @@ enum Lidless {
             return
         }
 
+        if external {
+            if reassert { turnOff(builtin) }
+            return
+        }
+
         // Steady state, undocked: quietly note the brightness the user prefers
         // so that undocking later restores it. Read-only; it never writes.
-        if !external, let ds = displayServices {
+        if let ds = displayServices {
             var current: Float = 0
             if ds.get(builtin, &current) == 0 && current > 0.05 { saveBrightness(current) }
         }
@@ -148,10 +165,17 @@ enum Lidless {
     // end), so they get coalesced and acted on once things have settled.
 
     nonisolated(unsafe) static var pendingApply: DispatchWorkItem?
+    /// Survives coalescing, so a reconfiguration callback cannot cancel a wake's reassert.
+    nonisolated(unsafe) static var pendingReassert = false
 
-    static func scheduleApply(after delay: TimeInterval = 1.0) {
+    static func scheduleApply(after delay: TimeInterval = 1.0, reassert: Bool = false) {
         pendingApply?.cancel()
-        let work = DispatchWorkItem { apply() }
+        if reassert { pendingReassert = true }
+        let work = DispatchWorkItem {
+            let reassert = pendingReassert
+            pendingReassert = false
+            apply(reassert: reassert)
+        }
         pendingApply = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
@@ -166,7 +190,7 @@ enum Lidless {
         // macOS restores the panel's own brightness on wake, so re-assert afterwards.
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { _ in scheduleApply(after: 3.0) }
+        ) { _ in scheduleApply(after: 3.0, reassert: true) }
 
         // The callback above is not reliably delivered to a background launchd
         // agent, so a cheap poll is what actually drives this. Both funnel into
