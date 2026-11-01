@@ -110,11 +110,11 @@ The panel goes dark but stays a display as far as macOS is concerned, so in exte
 
 ## Changelog
 
-### 0.2.0 — 2026-10-31
+### 0.2.0 — 2026-11-01
 
-lidless is now installed from a prebuilt release for Apple Silicon and Intel, with no sources or Command Line Tools needed: `curl -fsSL https://raw.githubusercontent.com/np25071984/lidless/main/install.sh | sh`. Homebrew installs the same release. The flags are replaced by commands: `lidless start | stop | restart | status | logs | once | on | off | run | uninstall | version`. The service is its own launchd agent, `io.github.np25071984.lidless`, written by `lidless start`; under Homebrew, `start`, `stop` and `restart` hand over to `brew services`. Stopping the service while docked now relights the panel. `uninstall.sh` is replaced by `lidless uninstall`, and `--HEAD` installs are gone.
+Installed from a prebuilt release instead of built from source, and controlled with `lidless <command>` instead of flags. Stopping the service while docked relights the panel.
 
-Upgrading from 0.1.x: installed with `install.sh`, remove the old agent (`launchctl bootout gui/$UID/com.local.lidless; rm ~/Library/LaunchAgents/com.local.lidless.plist ~/.local/bin/lidless`) and run the installer. With Homebrew, `brew upgrade lidless && brew services restart lidless`.
+Upgrading from 0.1.x with `install.sh`: `launchctl bootout gui/$UID/com.local.lidless; rm ~/Library/LaunchAgents/com.local.lidless.plist ~/.local/bin/lidless`, then run the installer. With Homebrew: `brew upgrade lidless && brew services restart lidless`.
 
 ### 0.1.1
 
