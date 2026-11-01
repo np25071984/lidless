@@ -14,9 +14,11 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     permissions:
-      contents: write  # to create the release
+      contents: write      # to create the release
+      id-token: write      # to sign the provenance attestation
+      attestations: write  # to store it
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
         with:
           persist-credentials: false
 
@@ -39,6 +41,14 @@ jobs:
           tar -czf lidless-macos.tar.gz -C build lidless
           shasum -a 256 lidless-macos.tar.gz > lidless-macos.tar.gz.sha256
           cat lidless-macos.tar.gz.sha256
+
+      # The checksum sits in the same release as the tarball, so it only catches
+      # a corrupt download. The attestation ties the tarball to this workflow
+      # and commit: `gh attestation verify` checks it.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+        with:
+          subject-path: lidless-macos.tar.gz
 
       - name: Release notes from the changelog
         run: |
