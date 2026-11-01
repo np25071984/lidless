@@ -5,25 +5,38 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Test
+        run: |
+          swift --version
+          swift test
 
       - name: Build
         run: |
-          swiftc --version
-          swiftc -O -o lidless main.swift
-          ./lidless --version
+          ./build.sh --universal
+          build/lidless version
 
       - name: Check shell scripts
-        run: bash -n install.sh uninstall.sh
+        run: |
+          sh -n install.sh
+          bash -n build.sh
 
   formula:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       # Tap by URL so trust matches it, then overlay this commit's formula so a
       # pull request is audited against its own changes.
@@ -36,14 +49,8 @@ jobs:
       - name: Audit
         run: brew audit --strict --formula ${{ github.repository }}/lidless
 
-      # Builds the release tarball the formula pins, so a wrong url or sha256 fails here.
+      # Downloads the release the formula pins, so a wrong url or sha256 fails here.
       - name: Install and test
         run: |
-          brew install --build-from-source ${{ github.repository }}/lidless
+          brew install ${{ github.repository }}/lidless
           brew test ${{ github.repository }}/lidless
-
-      - name: HEAD build reports its commit
-        run: |
-          brew uninstall lidless
-          brew install --HEAD ${{ github.repository }}/lidless
-          lidless --version | grep '^HEAD-'
