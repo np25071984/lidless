@@ -20,6 +20,8 @@ This downloads the latest release, checks its checksum, installs `~/.local/bin/l
 
 To install a particular release, or somewhere other than `~/.local`, set `LIDLESS_VERSION=v0.2.0` or `LIDLESS_PREFIX=/opt/lidless` for `sh`, after the `|`.
 
+Releases from 0.2.1 on carry a build provenance attestation, which proves the tarball was built by this repository's release workflow. Check a downloaded one with `gh attestation verify lidless-macos.tar.gz --repo np25071984/lidless`.
+
 ### With Homebrew
 
 ```bash
