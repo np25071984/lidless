@@ -41,4 +41,4 @@ git push origin vX.Y.Z
 
 The tag runs `.github/workflows/release.yml`, which tests, builds the universal binary and publishes `lidless-macos.tar.gz` and its `.sha256` as the release `install.sh` installs. It fails, publishing nothing, if `version` does not match the tag or the Changelog has no entry for it.
 
-Then update `Formula/lidless.rb` in a PR: `url` and `version` to the new tag, `sha256` to the one in the release's `lidless-macos.tar.gz.sha256`. Homebrew users get the release only once that is merged.
+Then update `Formula/lidless.rb` in a PR: `url` to the new tag (Homebrew reads the version from it), `sha256` to the one in the release's `lidless-macos.tar.gz.sha256`. Homebrew users get the release only once that is merged.
