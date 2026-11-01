@@ -1,27 +1,41 @@
 class Lidless < Formula
   desc "Keep the built-in MacBook display dark while an external monitor is connected"
   homepage "https://github.com/np25071984/lidless"
-  url "https://github.com/np25071984/lidless/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "42ec6adb6ef7f4cc6c4514c4d2fa55fece2b058025ec274e8c8bd518a73ecb8f"
+  url "https://github.com/np25071984/lidless/releases/download/v0.2.0/lidless-macos.tar.gz"
+  sha256 "76c7ccb41f5ef788d3a460e25b430fa8a49eca0edb8504a7f5f5a1d6a8e08e4a"
   license "MIT"
 
   depends_on :macos
 
+  # The prebuilt release: a universal binary, so no Command Line Tools needed.
+  # lidless needs no privacy permission, so the service can run it from
+  # opt_bin, whose target changes with every version.
   def install
-    system "swiftc", "-O", "-o", "lidless", "main.swift"
     bin.install "lidless"
   end
 
   service do
-    run [opt_bin/"lidless"]
-    keep_alive true
-    run_at_load true
+    run [opt_bin/"lidless", "run"]
+    keep_alive successful_exit: false
+    process_type :background
     log_path var/"log/lidless.log"
     error_log_path var/"log/lidless.log"
-    process_type :background
+  end
+
+  def caveats
+    <<~EOS
+      Start lidless now and at every login:
+        brew services start lidless
+
+      After `brew upgrade lidless`, restart it on the new version:
+        brew services restart lidless
+
+      If you installed lidless with install.sh before, remove that copy first:
+        ~/.local/bin/lidless uninstall
+    EOS
   end
 
   test do
-    assert_equal version.to_s, shell_output("#{bin}/lidless --version").strip
+    assert_equal "lidless #{version}", shell_output("#{bin}/lidless version").strip
   end
 end
