@@ -19,6 +19,7 @@ Each fact lives in one place. `CLAUDE.md` only imports this file; edit this one.
 | How macOS behaves, and why the code is shaped around it | comments at the code that depends on it, and *How it works* in `README.md` |
 | How to use lidless | `README.md` |
 | What changed in a release | the Changelog in `README.md` |
+| The project page, np25071984.github.io/lidless | `docs/index.html`: a short pitch that links to `README.md` for details. Change it when a headline feature, the install commands or the known limitation change |
 
 ## Rules
 
