@@ -6,6 +6,14 @@ Turns the built-in MacBook display off whenever an external monitor is connected
 
 A single small binary run as a launchd service: no app, no Dock icon, no menu bar, and no privacy permission to grant. You control it with `lidless start | stop | status | …`.
 
+## What macOS gets wrong
+
+**Nothing turns the built-in screen off for you.** macOS has no option to switch off the built-in display when an external monitor is connected. The only automatic way is to close the lid.
+
+**Turning it off by hand is a chore.** It takes several presses of the brightness key, or a drag of the brightness slider all the way down: a routine nobody asked for, every time you dock.
+
+**It doesn't last.** After the Mac wakes from sleep, macOS lights the built-in screen again, and you do it all over.
+
 ## Install
 
 Needs macOS 13 or later, on Apple Silicon or Intel. In Terminal:

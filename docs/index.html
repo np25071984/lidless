@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lidless — clamshell mode without closing the lid</title>
+<meta name="description" content="Turns the built-in MacBook display off whenever an external monitor is connected, and restores its previous brightness when you unplug. Clamshell-mode behaviour without closing the lid.">
+<meta property="og:title" content="lidless">
+<meta property="og:description" content="Turns the built-in MacBook display off whenever an external monitor is connected, and restores its previous brightness when you unplug. Clamshell-mode behaviour without closing the lid.">
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #5f6368;
+    --line: #e3e3e8;
+    --accent: #4b57d6;
+    --accent-text: #ffffff;
+    --code-bg: #f2f2f6;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 30px rgba(0, 0, 0, .08);
+    --frame: #c9c9d1;
+    --lit: #dfe3ff;
+    --lit-2: #b9c0fb;
+    --dark-panel: #0b0b0e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111114;
+      --surface: #1b1b20;
+      --text: #ececf1;
+      --muted: #a1a1aa;
+      --line: #2c2c33;
+      --accent: #8b93ff;
+      --accent-text: #111114;
+      --code-bg: #212128;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 30px rgba(0, 0, 0, .35);
+      --frame: #4a4a55;
+      --lit: #2b3170;
+      --lit-2: #4b57d6;
+      --dark-panel: #000000;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  main, footer { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
+  h2 { font-size: 1.6rem; margin: 0 0 .6rem; }
+  h3 { font-size: 1.1rem; margin: 0 0 .4rem; }
+  p { margin: 0 0 1rem; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+  code { background: var(--code-bg); padding: .1em .35em; border-radius: 5px; }
+
+  .hero { padding: 72px 0 32px; text-align: center; }
+  .hero h1 { font-size: clamp(2.4rem, 7vw, 3.6rem); margin: 0 0 .8rem; }
+  .hero p { text-wrap: balance; }
+  .hero .lead { font-size: clamp(1.15rem, 3vw, 1.35rem); max-width: 640px; margin: 0 auto 1rem; }
+  .hero .sub { color: var(--muted); max-width: 600px; margin: 0 auto 2rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .button {
+    display: inline-block; padding: .65em 1.3em; border-radius: 10px; font-weight: 600;
+    border: 1px solid var(--line); color: var(--text); background: var(--surface);
+  }
+  .button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .button:hover { text-decoration: none; filter: brightness(1.05); }
+
+  .shot { margin: 32px auto 8px; max-width: 560px; }
+  .shot svg { display: block; width: 100%; height: auto; }
+
+  section { padding: 48px 0 8px; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+  }
+  .card p { margin: 0; color: var(--muted); }
+
+  .facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .facts li { padding-left: 1.4em; position: relative; text-wrap: pretty; }
+  .facts li::before { content: "–"; position: absolute; left: 0; color: var(--muted); }
+
+  .cmd {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 1rem;
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 10px 10px 14px;
+  }
+  .cmd pre { margin: 0; flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .copy {
+    flex: none; font: inherit; font-size: .85rem; padding: .35em .8em; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  }
+  .note { color: var(--muted); font-size: .95rem; }
+
+  footer {
+    margin-top: 56px; padding-top: 24px; padding-bottom: 48px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: .95rem; display: flex; flex-wrap: wrap; gap: 8px 20px;
+  }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .hero { padding-top: 48px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <h1>lidless</h1>
+    <p class="lead">Clamshell mode without closing the lid.</p>
+    <p class="sub">Turns the built-in MacBook display off whenever an external monitor is connected, and restores its previous brightness when you unplug.</p>
+    <div class="actions">
+      <a class="button primary" href="#install">Install</a>
+      <a class="button" href="https://github.com/np25071984/lidless">Source on GitHub</a>
+    </div>
+  </header>
+
+  <figure class="shot">
+    <svg viewBox="0 0 560 300" role="img" aria-label="An external monitor, lit, next to an open MacBook whose built-in display is dark">
+      <defs>
+        <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" style="stop-color:var(--lit)"/>
+          <stop offset="1" style="stop-color:var(--lit-2)"/>
+        </linearGradient>
+      </defs>
+      <!-- external monitor -->
+      <rect x="20" y="20" width="320" height="200" rx="12" style="fill:var(--surface);stroke:var(--frame)" stroke-width="2"/>
+      <rect x="32" y="32" width="296" height="176" rx="4" style="fill:url(#glow)"/>
+      <rect x="170" y="220" width="20" height="44" style="fill:var(--frame)"/>
+      <rect x="130" y="262" width="100" height="10" rx="5" style="fill:var(--frame)"/>
+      <!-- laptop, lid open, panel dark -->
+      <rect x="370" y="122" width="170" height="112" rx="8" style="fill:var(--surface);stroke:var(--frame)" stroke-width="2"/>
+      <rect x="380" y="132" width="150" height="94" rx="3" style="fill:var(--dark-panel)"/>
+      <path d="M352 236 H558 L548 252 H362 Z" style="fill:var(--surface);stroke:var(--frame)" stroke-width="2" stroke-linejoin="round"/>
+      <!-- cable -->
+      <path d="M190 272 C 260 290, 330 290, 372 250" fill="none" style="stroke:var(--frame)" stroke-width="2" stroke-dasharray="4 4"/>
+    </svg>
+  </figure>
+
+  <section aria-labelledby="problem">
+    <h2 id="problem">What macOS gets wrong</h2>
+    <p><strong>Nothing turns the built-in screen off for you.</strong> macOS has no option to switch off the built-in display when an external monitor is connected. The only automatic way is to close the lid.</p>
+    <p><strong>Turning it off by hand is a chore.</strong> It takes several presses of the brightness key, or a drag of the brightness slider all the way down: a routine nobody asked for, every time you dock.</p>
+    <p><strong>It doesn't last.</strong> After the Mac wakes from sleep, macOS lights the built-in screen again, and you do it all over.</p>
+  </section>
+
+  <section aria-labelledby="what">
+    <h2 id="what">What lidless does</h2>
+    <div class="features">
+      <div class="card">
+        <h3>Dark when docked</h3>
+        <p>Plug in an external monitor and the built-in panel's backlight goes off, with the lid still open.</p>
+      </div>
+      <div class="card">
+        <h3>Bright again when you unplug</h3>
+        <p>Disconnect and the panel comes back at the brightness it had before, and goes dark again on wake while docked.</p>
+      </div>
+      <div class="card">
+        <h3>Never fights you</h3>
+        <p>Brightness is only set when you dock or undock, so adjusting the built-in panel by hand is left alone. Stopping the service relights the panel.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="small">
+    <h2 id="small">Small on purpose</h2>
+    <ul class="facts">
+      <li>One open-source binary, run as a background service. No app, Dock icon or menu bar.</li>
+      <li>No privacy permission to grant, so upgrading or moving it needs nothing granted again.</li>
+      <li>About 2 to 4 seconds of CPU a day and a flat 3.4 MB of memory. The <a href="https://github.com/np25071984/lidless#cost">measurements</a> are in the README.</li>
+      <li>Controlled with <a href="https://github.com/np25071984/lidless#commands">a few commands</a>: <code>lidless status</code>, <code>on</code>, <code>off</code> and the rest.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="limit">
+    <h2 id="limit">One thing to know</h2>
+    <p>The panel goes dark but stays a display as far as macOS is concerned, so in extended-display mode the pointer and windows can still wander onto the black screen. Mirroring the built-in display to the external one avoids it.</p>
+  </section>
+
+  <section id="install" aria-labelledby="install-h">
+    <h2 id="install-h">Install</h2>
+    <p>macOS 13 or later, on Apple Silicon or Intel. In Terminal:</p>
+    <div class="cmd">
+      <pre id="curl">curl -fsSL https://raw.githubusercontent.com/np25071984/lidless/main/install.sh | sh</pre>
+      <button class="copy" data-copy="curl" type="button">Copy</button>
+    </div>
+    <p>Or with Homebrew:</p>
+    <div class="cmd">
+      <pre id="brew">brew trust --tap https://github.com/np25071984/lidless
+brew tap np25071984/lidless https://github.com/np25071984/lidless
+brew install lidless
+brew services start lidless</pre>
+      <button class="copy" data-copy="brew" type="button">Copy</button>
+    </div>
+    <p class="note">It starts at every login from then on. Upgrading, uninstalling and building from source are in the <a href="https://github.com/np25071984/lidless#install">README</a>.</p>
+  </section>
+</main>
+
+<footer>
+  <a href="https://github.com/np25071984/lidless">GitHub</a>
+  <a href="https://github.com/np25071984/lidless#readme">README</a>
+  <a href="https://github.com/np25071984/lidless#changelog">Changelog</a>
+  <a href="https://github.com/np25071984/lidless/releases/latest">Latest release</a>
+  <span>MIT license</span>
+</footer>
+
+<script>
+  document.querySelectorAll(".copy").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var text = document.getElementById(button.dataset.copy).textContent;
+      var done = function () {
+        button.textContent = "Copied";
+        setTimeout(function () { button.textContent = "Copy"; }, 1500);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      }
+    });
+  });
+</script>
+</body>
+</html>
