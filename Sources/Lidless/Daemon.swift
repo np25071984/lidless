@@ -14,6 +14,11 @@ final class Daemon {
     static let settleDelay: TimeInterval = 1
     /// macOS relights the panel on wake, a moment after the wake notification.
     static let wakeDelay: TimeInterval = 3
+    /// macOS also relights the panel as a login session finishes loading,
+    /// after the service has started and darkened it, with no notification
+    /// to follow. So the service darkens again at these delays after it
+    /// starts; how late macOS does it varies, hence more than one.
+    static let startDelays: [TimeInterval] = [3, 10, 30]
 
     private var policy = Policy()
     private var pending: DispatchWorkItem?
@@ -61,6 +66,11 @@ final class Daemon {
             .joined(separator: ", ")
         log("lidless \(version) started; displays: \(displays)")
         check()
+        for delay in Daemon.startDelays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.check(reassert: true)
+            }
+        }
         RunLoop.main.run()
         exit(0)
     }

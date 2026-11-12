@@ -55,6 +55,19 @@ struct PolicyTests {
         #expect(policy.next(docked: true, brightness: 0.7, reassert: true) == .darken)
     }
 
+    @Test("after login while docked, darken again: macOS relights the panel as the session loads")
+    func reassertAfterStart() {
+        var policy = Policy()
+        #expect(policy.next(docked: true, brightness: 0.5) == .darken)
+        #expect(policy.next(docked: true, brightness: 0.5, reassert: true) == .darken)
+    }
+
+    @Test("a reassert with the panel still dark does nothing: no write, no log line")
+    func reassertAlreadyDark() {
+        var policy = seen(docked: true)
+        #expect(policy.next(docked: true, brightness: 0, reassert: true) == .nothing)
+    }
+
     @Test("after wake while undocked, the panel is left alone")
     func reassertUndocked() {
         var policy = seen(docked: false)
