@@ -95,7 +95,7 @@ Two details that are easy to get wrong:
 - **The built-in panel is found via `CGGetOnlineDisplayList`, not `CGGetActiveDisplayList`.** With the lid shut or while mirroring, it drops out of the active list while still being the display whose backlight matters.
 - **Docking state is polled every 2 seconds rather than driven by `CGDisplayRegisterReconfigurationCallback`.** That callback is not delivered to a background launchd agent, which fails silently — the process stays alive with an empty error log and simply never reacts. The callback is still registered as a fast path when it does fire.
 
-Brightness is only written when the docking state *changes*, or on wake while docked, because macOS relights the panel itself. Adjusting the built-in panel by hand while docked is never fought or overwritten. On its first check while undocked, the service keeps the current brightness, and restores the saved one only if the panel was left dark. When the service stops while docked, it relights the panel first. The rules are specified by `Tests/lidlessTests/PolicyTests.swift`.
+Brightness is only written when the docking state *changes*, or on wake and shortly after login while docked, because macOS relights the panel itself then. Adjusting the built-in panel by hand while docked is never fought or overwritten. On its first check while undocked, the service keeps the current brightness, and restores the saved one only if the panel was left dark. When the service stops while docked, it relights the panel first. The rules are specified by `Tests/lidlessTests/PolicyTests.swift`.
 
 The binary carries an ad-hoc signature only. lidless asks for no privacy permission, so nothing is tied to its signature or path, and an upgrade or a move needs nothing granted again.
 

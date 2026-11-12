@@ -26,8 +26,9 @@ struct Policy {
     }
 
     /// Acts only on a *change* in docking state, so a brightness set by hand
-    /// while docked is never fought. `reassert` darkens again while docked,
-    /// for after wake, when macOS relights the panel itself.
+    /// while docked is never fought. `reassert` darkens a lit panel again
+    /// while docked, for after wake and after login, when macOS relights the
+    /// panel itself.
     mutating func next(docked now: Bool, brightness: Float?, reassert: Bool = false) -> Action {
         defer { docked = now }
         let lit = Policy.isLit(brightness)
@@ -41,7 +42,7 @@ struct Policy {
             return now ? .darken : .light
         }
         if now {
-            return reassert ? .darken : .nothing
+            return reassert && lit ? .darken : .nothing
         }
         // Undocked and unchanged: follow the level the user picks, so that
         // undocking later restores it.
