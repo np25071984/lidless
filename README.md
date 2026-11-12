@@ -120,6 +120,12 @@ The panel goes dark but stays a display as far as macOS is concerned, so in exte
 
 ## Changelog
 
+### 0.2.1 — 2026-11-12
+
+Darken the panel again shortly after login while docked: macOS relit it as the session finished loading, so after a restart with a display plugged in the panel stayed on.
+
+Upgrading: run the installer again, or with Homebrew: `brew upgrade lidless && brew services restart lidless`.
+
 ### 0.2.0 — 2026-11-01
 
 Installed from a prebuilt release instead of built from source, and controlled with `lidless <command>` instead of flags. Stopping the service while docked relights the panel.
