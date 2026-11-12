@@ -1,8 +1,8 @@
 class Lidless < Formula
   desc "Keep the built-in MacBook display dark while an external monitor is connected"
   homepage "https://github.com/np25071984/lidless"
-  url "https://github.com/np25071984/lidless/releases/download/v0.2.0/lidless-macos.tar.gz"
-  sha256 "76c7ccb41f5ef788d3a460e25b430fa8a49eca0edb8504a7f5f5a1d6a8e08e4a"
+  url "https://github.com/np25071984/lidless/releases/download/v0.2.1/lidless-macos.tar.gz"
+  sha256 "524ad801a44de5fa23a9be35d3ee4993c38e1fa5cf75f41321b5ab2d562414dc"
   license "MIT"
 
   depends_on :macos
