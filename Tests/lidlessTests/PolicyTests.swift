@@ -49,7 +49,7 @@ struct PolicyTests {
         #expect(policy.next(docked: true, brightness: 0.4) == .nothing)
     }
 
-    @Test("after wake while docked, darken again, keeping the level noted on docking: macOS relit the panel itself")
+    @Test("after wake or a power source change while docked, darken again, keeping the level noted on docking: macOS relit the panel itself")
     func reassertDocked() {
         var policy = seen(docked: true)
         #expect(policy.next(docked: true, brightness: 0.0625, reassert: true) == .darkenAgain)

@@ -12,7 +12,7 @@ A single small binary run as a launchd service: no app, no Dock icon, no menu ba
 
 **Turning it off by hand is a chore.** It takes several presses of the brightness key, or a drag of the brightness slider all the way down: a routine nobody asked for, every time you dock.
 
-**It doesn't last.** Whenever the Mac, or just its displays, wake from sleep, macOS lights the built-in screen again, and you do it all over.
+**It doesn't last.** Whenever the Mac, or just its displays, wake from sleep, or you plug in the charger, macOS lights the built-in screen again, and you do it all over.
 
 ## Install
 
@@ -95,7 +95,7 @@ Two details that are easy to get wrong:
 - **The built-in panel is found via `CGGetOnlineDisplayList`, not `CGGetActiveDisplayList`.** With the lid shut or while mirroring, it drops out of the active list while still being the display whose backlight matters.
 - **Docking state is polled every 2 seconds rather than driven by `CGDisplayRegisterReconfigurationCallback`.** That callback is not delivered to a background launchd agent, which fails silently — the process stays alive with an empty error log and simply never reacts. The callback is still registered as a fast path when it does fire.
 
-Brightness is only written when the docking state *changes*, and while docked on wake (of the Mac, or of the displays alone) and shortly after login, because macOS relights the panel itself then. Otherwise brightness is left to you and to macOS's own rules, such as dimming on battery. On wake and login a lit panel is switched off again, whoever lit it; to keep the built-in panel on while docked, `lidless stop`. The level restored on undock stays the one noted on docking, not the one macOS relit the panel at. An external display that is asleep still counts as plugged in: on display sleep it stays online and reports asleep. One switched off at its power button goes offline, which counts as unplugging. The display wake notification arrives only to a process running a full app event loop, so the service runs one, with no Dock icon or menu. On its first check while undocked, the service keeps the current brightness, and restores the saved one only if the panel was left dark. When the service stops while docked, it relights the panel first. The rules are specified by `Tests/lidlessTests/PolicyTests.swift`.
+Brightness is only written when the docking state *changes*, and while docked on wake (of the Mac, or of the displays alone), when the power source changes and shortly after login, because macOS relights the panel itself then. Otherwise brightness is left to you and to macOS's own rules, such as dimming on battery. On those a lit panel is switched off again, whoever lit it; to keep the built-in panel on while docked, `lidless stop`. The level restored on undock stays the one noted on docking, not the one macOS relit the panel at. An external display that is asleep still counts as plugged in: on display sleep it stays online and reports asleep. One switched off at its power button goes offline, which counts as unplugging. The display wake notification arrives only to a process running a full app event loop, so the service runs one, with no Dock icon or menu. On its first check while undocked, the service keeps the current brightness, and restores the saved one only if the panel was left dark. When the service stops while docked, it relights the panel first. The rules are specified by `Tests/lidlessTests/PolicyTests.swift`.
 
 The binary carries an ad-hoc signature only. lidless asks for no privacy permission, so nothing is tied to its signature or path, and an upgrade or a move needs nothing granted again.
 
@@ -122,7 +122,7 @@ The panel goes dark but stays a display as far as macOS is concerned, so in exte
 
 ### 0.2.2 — 2026-11-18
 
-Darken the panel again when the displays wake from idle sleep, not only when the Mac wakes: macOS relit it, so after the displays slept the panel stayed on. Sleeping displays no longer count as unplugged, which relit the panel each time they went to sleep. Darkening after wake no longer replaces the level restored on undock with the one macOS relit the panel at.
+Darken the panel again when the displays wake from idle sleep, not only when the Mac wakes: macOS relit it, so after the displays slept the panel stayed on. Sleeping displays no longer count as unplugged, which relit the panel each time they went to sleep. Likewise when the power source changes: plugging in the charger relit a dark panel. Darkening again no longer replaces the level restored on undock with the one macOS relit the panel at.
 
 Upgrading: run the installer again, or with Homebrew: `brew upgrade lidless && brew services restart lidless`.
 

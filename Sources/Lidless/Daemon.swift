@@ -1,6 +1,7 @@
 // `lidless run`: the service, as launchd runs it.
 
 import AppKit
+import IOKit.ps
 
 final class Daemon {
     /// Docking is polled: the reconfiguration callback is not reliably
@@ -16,6 +17,10 @@ final class Daemon {
     /// on system wake, and on display wake alone (the displays slept on idle,
     /// the Mac did not), which has its own notification.
     static let wakeDelay: TimeInterval = 3
+    /// macOS changes the panel's level when the power source changes (its
+    /// dim-on-battery rule), raising a dark panel by one step on plugging in
+    /// the charger. Act once it has.
+    static let powerDelay: TimeInterval = 3
     /// macOS also relights the panel as a login session finishes loading,
     /// after the service has started and darkened it, with no notification
     /// to follow. So the service darkens again at these delays after it
@@ -32,6 +37,9 @@ final class Daemon {
     /// the reassert after `settleDelay`, before macOS has relit the panel.
     private var pendingDeadline = DispatchTime.now()
     private var signals: [DispatchSourceSignal] = []
+    /// "AC Power" or "Battery Power". The power-source notification fires on
+    /// every battery reading too; only a change of source matters.
+    private var powerSource = Daemon.currentPowerSource()
 
     nonisolated(unsafe) static var shared: Daemon?
 
@@ -54,6 +62,13 @@ final class Daemon {
                 log("\(note.name.rawValue)")
                 self?.schedule(after: Daemon.wakeDelay, reassert: true)
             }
+        }
+
+        // Must be a non-capturing closure to convert to a C function pointer.
+        if let source = IOPSNotificationCreateRunLoopSource({ _ in
+            Daemon.shared?.powerChanged()
+        }, nil)?.takeRetainedValue() {
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
         }
 
         let poll = Timer.scheduledTimer(withTimeInterval: Daemon.pollInterval, repeats: true) {
@@ -87,6 +102,19 @@ final class Daemon {
         NSApplication.shared.setActivationPolicy(.prohibited)
         NSApplication.shared.run()
         exit(0)
+    }
+
+    static func currentPowerSource() -> String? {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue() else { return nil }
+        return IOPSGetProvidingPowerSourceType(info)?.takeUnretainedValue() as String?
+    }
+
+    private func powerChanged() {
+        let now = Daemon.currentPowerSource()
+        guard now != powerSource else { return }
+        log("power source: \(powerSource ?? "unknown") -> \(now ?? "unknown")")
+        powerSource = now
+        schedule(after: Daemon.powerDelay, reassert: true)
     }
 
     private func schedule(after delay: TimeInterval, reassert: Bool = false) {
