@@ -120,7 +120,7 @@ The panel goes dark but stays a display as far as macOS is concerned, so in exte
 
 ## Changelog
 
-### 0.2.2 — 2026-11-18
+### 0.3.0 — 2026-11-18
 
 Darken the panel again when the displays wake from idle sleep, not only when the Mac wakes: macOS relit it, so after the displays slept the panel stayed on. Darken it again also when the power source changes: plugging in the charger relit a dark panel. Sleeping displays no longer count as unplugged, which relit the panel each time they went to sleep. Darkening again no longer replaces the level restored on undock with the one macOS relit the panel at.
 
