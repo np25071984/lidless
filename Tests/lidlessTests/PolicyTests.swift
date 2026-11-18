@@ -43,23 +43,39 @@ struct PolicyTests {
         #expect(policy.next(docked: false, brightness: 0) == .light)
     }
 
-    @Test("docked and unchanged: a level set by hand is not fought")
+    @Test("docked and unchanged: a level set by hand, or by macOS's own rules, is not fought")
     func dockedSteady() {
         var policy = seen(docked: true)
         #expect(policy.next(docked: true, brightness: 0.4) == .nothing)
     }
 
-    @Test("after wake while docked, darken again: macOS relights the panel itself")
+    @Test("after wake or a power source change while docked, darken again, keeping the level noted on docking: macOS relit the panel itself")
     func reassertDocked() {
         var policy = seen(docked: true)
-        #expect(policy.next(docked: true, brightness: 0.7, reassert: true) == .darken)
+        #expect(policy.next(docked: true, brightness: 0.0625, reassert: true) == .darkenAgain)
     }
 
     @Test("after login while docked, darken again: macOS relights the panel as the session loads")
     func reassertAfterStart() {
         var policy = Policy()
         #expect(policy.next(docked: true, brightness: 0.5) == .darken)
-        #expect(policy.next(docked: true, brightness: 0.5, reassert: true) == .darken)
+        #expect(policy.next(docked: true, brightness: 0.5, reassert: true) == .darkenAgain)
+    }
+
+    @Test("after wake while docked, a panel lit by hand is darkened too: to keep it lit, stop the service")
+    func reassertHandLit() {
+        var policy = seen(docked: true)
+        _ = policy.next(docked: true, brightness: 0.7)
+        #expect(policy.next(docked: true, brightness: 0.7, reassert: true) == .darkenAgain)
+    }
+
+    @Test("docking again starts dark, whatever was lit by hand during the last dock")
+    func redockStartsDark() {
+        var policy = seen(docked: true)
+        _ = policy.next(docked: true, brightness: 0.7)
+        _ = policy.next(docked: false, brightness: 0.7)
+        #expect(policy.next(docked: true, brightness: 0.7) == .darken)
+        #expect(policy.next(docked: true, brightness: 0.6, reassert: true) == .darkenAgain)
     }
 
     @Test("a reassert with the panel still dark does nothing: no write, no log line")
@@ -86,12 +102,61 @@ struct PolicyTests {
         #expect(policy.next(docked: false, brightness: 0.02) == .nothing)
     }
 
+    @Test("an awake external display is docked")
+    func dockingAwake() {
+        #expect(Policy.docking([(builtin: true, asleep: false), (builtin: false, asleep: false)], screensAsleep: false))
+    }
+
+    @Test("an external display asleep on display sleep is still docked: display sleep is not unplugging")
+    func dockingDisplaySleep() {
+        #expect(Policy.docking([(builtin: true, asleep: false), (builtin: false, asleep: true)], screensAsleep: true))
+    }
+
+    @Test("an external display asleep without display sleep has been switched off into standby: undocked")
+    func dockingStandby() {
+        #expect(!Policy.docking([(builtin: true, asleep: false), (builtin: false, asleep: true)], screensAsleep: false))
+    }
+
+    @Test("only the built-in display online is undocked, display sleep or not")
+    func dockingBuiltinOnly() {
+        #expect(!Policy.docking([(builtin: true, asleep: false)], screensAsleep: false))
+        #expect(!Policy.docking([(builtin: true, asleep: true)], screensAsleep: true))
+    }
+
     @Test("the state seen is recorded for the next check")
     func records() {
         var policy = Policy()
         #expect(policy.docked == nil)
         _ = policy.next(docked: true, brightness: 0.5)
         #expect(policy.docked == true)
+    }
+
+    @Test("stopping while docked relights the panel, which nothing else would on undock")
+    func stopDockedRelights() {
+        #expect(seen(docked: true).relightsOnStop)
+    }
+
+    @Test("stopping while undocked leaves the panel as it is")
+    func stopUndocked() {
+        #expect(!seen(docked: false).relightsOnStop)
+    }
+
+    @Test("at logout the panel is left alone: lighting it while macOS switches to the login window can freeze the Mac")
+    func logout() {
+        var policy = seen(docked: true)
+        policy.loggingOut = true
+        #expect(!policy.relightsOnStop)
+        #expect(policy.next(docked: false, brightness: 0) == .nothing)
+        #expect(policy.next(docked: true, brightness: 0.0625, reassert: true) == .nothing)
+    }
+
+    @Test("a cancelled logout acts as before")
+    func logoutCancelled() {
+        var policy = seen(docked: true)
+        policy.loggingOut = true
+        policy.loggingOut = false
+        #expect(policy.relightsOnStop)
+        #expect(policy.next(docked: false, brightness: 0) == .light)
     }
 }
 

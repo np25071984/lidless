@@ -15,21 +15,45 @@ struct Policy {
         case light
         /// Remember this level for the next undock; the panel is not touched.
         case remember(Float)
+        /// Switch the backlight off again, keeping the level noted on docking:
+        /// the one now is macOS's, not the user's.
+        case darkenAgain
     }
 
     /// Whether an external display was connected at the last check; nil
     /// before the first.
     private(set) var docked: Bool?
 
+    /// From logout until it is cancelled. Lighting the panel while macOS
+    /// switches to the login window can freeze the Mac, so the panel is left
+    /// as it is; the next session's first check sets it again.
+    var loggingOut = false
+
+    /// Whether stopping relights the panel: only one this service darkened,
+    /// since nothing would relight it on undock; one dimmed by hand stays as
+    /// it is. Not at logout.
+    var relightsOnStop: Bool { docked == true && !loggingOut }
+
     static func isLit(_ brightness: Float?) -> Bool {
         brightness.map { $0 > darkLevel } ?? false
     }
 
-    /// Acts only on a *change* in docking state, so a brightness set by hand
-    /// while docked is never fought. `reassert` darkens a lit panel again
-    /// while docked, for after wake and after login, when macOS relights the
-    /// panel itself.
+    /// Whether an external display is connected, from each online display:
+    /// whether it is the built-in one and whether it is asleep. On display
+    /// sleep an external display stays online and reports asleep, which is
+    /// not unplugging. Some monitors switched off at their power button also
+    /// stay online and report asleep, which is: the difference is that only
+    /// display sleep comes with macOS's notification, `screensAsleep`.
+    static func docking(_ displays: [(builtin: Bool, asleep: Bool)], screensAsleep: Bool) -> Bool {
+        displays.contains { !$0.builtin && (!$0.asleep || screensAsleep) }
+    }
+
+    /// Acts only on a *change* in docking state, so brightness is left to
+    /// macOS and the user otherwise. `reassert` darkens a lit panel again
+    /// while docked, after wake, a power source change and login, when macOS
+    /// relights it itself. To keep the panel lit while docked, stop the service.
     mutating func next(docked now: Bool, brightness: Float?, reassert: Bool = false) -> Action {
+        if loggingOut { return .nothing }
         defer { docked = now }
         let lit = Policy.isLit(brightness)
 
@@ -42,7 +66,7 @@ struct Policy {
             return now ? .darken : .light
         }
         if now {
-            return reassert && lit ? .darken : .nothing
+            return reassert && lit ? .darkenAgain : .nothing
         }
         // Undocked and unchanged: follow the level the user picks, so that
         // undocking later restores it.
