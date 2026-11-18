@@ -13,14 +13,11 @@ final class Daemon {
     /// One plug-in fires several reconfiguration callbacks (begin, mode set,
     /// end); act once they have settled.
     static let settleDelay: TimeInterval = 1
-    /// macOS relights the panel on wake, a moment after the wake notification:
-    /// on system wake, and on display wake alone (the displays slept on idle,
-    /// the Mac did not), which has its own notification.
-    static let wakeDelay: TimeInterval = 3
-    /// macOS changes the panel's level when the power source changes (its
-    /// dim-on-battery rule), raising a dark panel by one step on plugging in
-    /// the charger. Act once it has.
-    static let powerDelay: TimeInterval = 3
+    /// macOS relights the panel a moment after the notification for: system
+    /// wake; display wake alone (the displays slept on idle, the Mac did not);
+    /// and a power source change, where its dim-on-battery rule raises a dark
+    /// panel by one step on plugging in the charger. Act once it has.
+    static let relightDelay: TimeInterval = 3
     /// macOS also relights the panel as a login session finishes loading,
     /// after the service has started and darkened it, with no notification
     /// to follow. So the service darkens again at these delays after it
@@ -60,7 +57,7 @@ final class Daemon {
         for name in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
                 log("\(note.name.rawValue)")
-                self?.schedule(after: Daemon.wakeDelay, reassert: true)
+                self?.schedule(after: Daemon.relightDelay, reassert: true)
             }
         }
 
@@ -114,7 +111,7 @@ final class Daemon {
         guard now != powerSource else { return }
         log("power source: \(powerSource ?? "unknown") -> \(now ?? "unknown")")
         powerSource = now
-        schedule(after: Daemon.powerDelay, reassert: true)
+        schedule(after: Daemon.relightDelay, reassert: true)
     }
 
     private func schedule(after delay: TimeInterval, reassert: Bool = false) {
