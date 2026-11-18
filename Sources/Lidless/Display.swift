@@ -37,7 +37,7 @@ enum Display {
     }
 
     static func docked() -> Bool {
-        online().contains { CGDisplayIsBuiltin($0) == 0 && CGDisplayIsAsleep($0) == 0 }
+        Policy.docking(online().map { (builtin: CGDisplayIsBuiltin($0) != 0, asleep: CGDisplayIsAsleep($0) != 0) })
     }
 
     static func brightness(_ display: CGDirectDisplayID) -> Float? {
@@ -48,11 +48,13 @@ enum Display {
 
     // MARK: The panel
 
-    static func darken(_ display: CGDirectDisplayID) {
+    /// `noting`: save the current level to restore on undock. Not after wake,
+    /// when the level is one macOS picked.
+    static func darken(_ display: CGDirectDisplayID, noting: Bool = true) {
         guard let services else { return }
         let current = brightness(display)
         // Only a level worth restoring is noted; already dark, the old note stays.
-        if Policy.isLit(current), let current { Saved.store(current) }
+        if noting, Policy.isLit(current), let current { Saved.store(current) }
         let rc = services.set(display, 0)
         log("built-in \(display) off (was \(current.map { "\($0)" } ?? "?"), rc \(rc))")
     }

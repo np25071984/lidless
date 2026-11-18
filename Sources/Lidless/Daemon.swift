@@ -12,7 +12,9 @@ final class Daemon {
     /// One plug-in fires several reconfiguration callbacks (begin, mode set,
     /// end); act once they have settled.
     static let settleDelay: TimeInterval = 1
-    /// macOS relights the panel on wake, a moment after the wake notification.
+    /// macOS relights the panel on wake, a moment after the wake notification:
+    /// on system wake, and on display wake alone (the displays slept on idle,
+    /// the Mac did not), which has its own notification.
     static let wakeDelay: TimeInterval = 3
     /// macOS also relights the panel as a login session finishes loading,
     /// after the service has started and darkened it, with no notification
@@ -25,6 +27,10 @@ final class Daemon {
     /// Survives coalescing, so a reconfiguration callback cannot cancel a
     /// wake's reassert.
     private var pendingReassert = false
+    /// When the pending check runs. Coalescing never brings it forward: the
+    /// reconfiguration callbacks that come with a wake would otherwise run
+    /// the reassert after `settleDelay`, before macOS has relit the panel.
+    private var pendingDeadline = DispatchTime.now()
     private var signals: [DispatchSourceSignal] = []
 
     nonisolated(unsafe) static var shared: Daemon?
@@ -42,9 +48,13 @@ final class Daemon {
             Daemon.shared?.schedule(after: Daemon.settleDelay)
         }, nil)
 
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.schedule(after: Daemon.wakeDelay, reassert: true) }
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                log("\(note.name.rawValue)")
+                self?.schedule(after: Daemon.wakeDelay, reassert: true)
+            }
+        }
 
         let poll = Timer.scheduledTimer(withTimeInterval: Daemon.pollInterval, repeats: true) {
             [weak self] _ in self?.check()
@@ -71,7 +81,11 @@ final class Daemon {
                 self?.check(reassert: true)
             }
         }
-        RunLoop.main.run()
+        // A full app event loop, not just the run loop: without it the
+        // NSWorkspace display wake notification never arrives.
+        // `.prohibited`: no Dock icon, no menu bar.
+        NSApplication.shared.setActivationPolicy(.prohibited)
+        NSApplication.shared.run()
         exit(0)
     }
 
@@ -82,10 +96,13 @@ final class Daemon {
             guard let self else { return }
             let reassert = self.pendingReassert
             self.pendingReassert = false
+            self.pending = nil
             self.check(reassert: reassert)
         }
+        let deadline = DispatchTime.now() + delay
+        if pending == nil || deadline > pendingDeadline { pendingDeadline = deadline }
         pending = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: pendingDeadline, execute: work)
     }
 
     private func check(reassert: Bool = false) {
@@ -105,6 +122,7 @@ final class Daemon {
         case .darken: Display.darken(panel)
         case .light: Display.light(panel)
         case .remember(let level): Saved.store(level)
+        case .darkenAgain: Display.darken(panel, noting: false)
         }
     }
 

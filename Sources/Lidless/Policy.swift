@@ -15,6 +15,9 @@ struct Policy {
         case light
         /// Remember this level for the next undock; the panel is not touched.
         case remember(Float)
+        /// Switch the backlight off again, keeping the level noted on docking:
+        /// the one now is macOS's, not the user's.
+        case darkenAgain
     }
 
     /// Whether an external display was connected at the last check; nil
@@ -25,10 +28,19 @@ struct Policy {
         brightness.map { $0 > darkLevel } ?? false
     }
 
-    /// Acts only on a *change* in docking state, so a brightness set by hand
-    /// while docked is never fought. `reassert` darkens a lit panel again
-    /// while docked, for after wake and after login, when macOS relights the
-    /// panel itself.
+    /// Whether an external display is connected, from each online display:
+    /// whether it is the built-in one and whether it is asleep. Asleep still
+    /// counts: on display sleep an external display stays online and reports
+    /// asleep, which is not unplugging. One switched off at its power button
+    /// goes offline, so it is not in the list at all.
+    static func docking(_ displays: [(builtin: Bool, asleep: Bool)]) -> Bool {
+        displays.contains { !$0.builtin }
+    }
+
+    /// Acts only on a *change* in docking state, so brightness is left to
+    /// macOS and the user otherwise. `reassert` darkens a lit panel again
+    /// while docked, after wake and after login, when macOS relights it
+    /// itself. To keep the panel lit while docked, stop the service.
     mutating func next(docked now: Bool, brightness: Float?, reassert: Bool = false) -> Action {
         defer { docked = now }
         let lit = Policy.isLit(brightness)
@@ -42,7 +54,7 @@ struct Policy {
             return now ? .darken : .light
         }
         if now {
-            return reassert && lit ? .darken : .nothing
+            return reassert && lit ? .darkenAgain : .nothing
         }
         // Undocked and unchanged: follow the level the user picks, so that
         // undocking later restores it.
