@@ -34,6 +34,12 @@ final class Daemon {
     /// the reassert after `settleDelay`, before macOS has relit the panel.
     private var pendingDeadline = DispatchTime.now()
     private var signals: [DispatchSourceSignal] = []
+    /// From macOS's display sleep notification until a while after the wake
+    /// one: an external display that reports asleep meanwhile is not unplugged.
+    private var screensAsleep = false
+    /// Counts display sleeps, so that clearing `screensAsleep` after a wake
+    /// is skipped when the displays have slept again meanwhile.
+    private var sleeps = 0
     /// "AC Power" or "Battery Power". The power-source notification fires on
     /// every battery reading too; only a change of source matters.
     private var powerSource = Daemon.currentPowerSource()
@@ -54,10 +60,31 @@ final class Daemon {
         }, nil)
 
         let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.willSleepNotification, NSWorkspace.screensDidSleepNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.screensAsleep = true
+                self?.sleeps += 1
+            }
+        }
         for name in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let self else { return }
                 log("\(note.name.rawValue)")
-                self?.schedule(after: Daemon.relightDelay, reassert: true)
+                self.schedule(after: Daemon.relightDelay, reassert: true)
+                // An external display may still report asleep for a moment
+                // after the wake notification; until then it is not unplugged.
+                let sleeps = self.sleeps
+                DispatchQueue.main.asyncAfter(deadline: .now() + Daemon.relightDelay) { [weak self] in
+                    if self?.sleeps == sleeps { self?.screensAsleep = false }
+                }
+            }
+        }
+        // Sent for restart and shut down too, which log out first.
+        let distributed = DistributedNotificationCenter.default()
+        for (name, ending) in [("com.apple.logoutInitiated", true), ("com.apple.logoutCancelled", false)] {
+            distributed.addObserver(forName: .init(name), object: nil, queue: .main) { [weak self] _ in
+                log(name)
+                self?.policy.loggingOut = ending
             }
         }
 
@@ -73,8 +100,7 @@ final class Daemon {
         }
         poll.tolerance = Daemon.pollTolerance
 
-        // Stopped (`lidless stop`, `brew services stop`, logout), the panel
-        // would stay dark with nothing to relight it on undock.
+        // Stopping relights the panel, unless logging out: see `Policy.relightsOnStop`.
         for sig in [SIGTERM, SIGINT] {
             signal(sig, SIG_IGN)
             let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
@@ -133,7 +159,7 @@ final class Daemon {
     private func check(reassert: Bool = false) {
         guard let panel = Display.builtin() else { return }
         let before = policy.docked
-        let docked = Display.docked()
+        let docked = Display.docked(screensAsleep: screensAsleep)
         let action = policy.next(docked: docked, brightness: Display.brightness(panel), reassert: reassert)
         if before != docked {
             log("docked: \(before.map { "\($0)" } ?? "unknown") -> \(docked)")
@@ -153,8 +179,7 @@ final class Daemon {
 
     private func stop() {
         log("stopping")
-        // Only a panel this service darkened; one dimmed by hand stays as it is.
-        if policy.docked == true, let panel = Display.builtin() { Display.light(panel) }
+        if policy.relightsOnStop, let panel = Display.builtin() { Display.light(panel) }
         exit(0)
     }
 }

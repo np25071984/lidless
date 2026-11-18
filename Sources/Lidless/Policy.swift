@@ -24,17 +24,28 @@ struct Policy {
     /// before the first.
     private(set) var docked: Bool?
 
+    /// From logout until it is cancelled. Lighting the panel while macOS
+    /// switches to the login window can freeze the Mac, so the panel is left
+    /// as it is; the next session's first check sets it again.
+    var loggingOut = false
+
+    /// Whether stopping relights the panel: only one this service darkened,
+    /// since nothing would relight it on undock; one dimmed by hand stays as
+    /// it is. Not at logout.
+    var relightsOnStop: Bool { docked == true && !loggingOut }
+
     static func isLit(_ brightness: Float?) -> Bool {
         brightness.map { $0 > darkLevel } ?? false
     }
 
     /// Whether an external display is connected, from each online display:
-    /// whether it is the built-in one and whether it is asleep. Asleep still
-    /// counts: on display sleep an external display stays online and reports
-    /// asleep, which is not unplugging. One switched off at its power button
-    /// goes offline, so it is not in the list at all.
-    static func docking(_ displays: [(builtin: Bool, asleep: Bool)]) -> Bool {
-        displays.contains { !$0.builtin }
+    /// whether it is the built-in one and whether it is asleep. On display
+    /// sleep an external display stays online and reports asleep, which is
+    /// not unplugging. Some monitors switched off at their power button also
+    /// stay online and report asleep, which is: the difference is that only
+    /// display sleep comes with macOS's notification, `screensAsleep`.
+    static func docking(_ displays: [(builtin: Bool, asleep: Bool)], screensAsleep: Bool) -> Bool {
+        displays.contains { !$0.builtin && (!$0.asleep || screensAsleep) }
     }
 
     /// Acts only on a *change* in docking state, so brightness is left to
@@ -42,6 +53,7 @@ struct Policy {
     /// while docked, after wake, a power source change and login, when macOS
     /// relights it itself. To keep the panel lit while docked, stop the service.
     mutating func next(docked now: Bool, brightness: Float?, reassert: Bool = false) -> Action {
+        if loggingOut { return .nothing }
         defer { docked = now }
         let lit = Policy.isLit(brightness)
 

@@ -36,8 +36,10 @@ enum Display {
         online().first { CGDisplayIsBuiltin($0) != 0 }
     }
 
-    static func docked() -> Bool {
-        Policy.docking(online().map { (builtin: CGDisplayIsBuiltin($0) != 0, asleep: CGDisplayIsAsleep($0) != 0) })
+    static func docked(screensAsleep: Bool = false) -> Bool {
+        Policy.docking(
+            online().map { (builtin: CGDisplayIsBuiltin($0) != 0, asleep: CGDisplayIsAsleep($0) != 0) },
+            screensAsleep: screensAsleep)
     }
 
     static func brightness(_ display: CGDirectDisplayID) -> Float? {
